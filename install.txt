@@ -1,0 +1,5 @@
+wget https://github.com/apache/spark/archive/master.zip
+unzip master.zip 
+cd spark-master/
+yum install maven
+./build/mvn -T 1C -DskipTests clean package
