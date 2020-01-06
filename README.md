@@ -4,25 +4,29 @@ The [Oracle Cloud Infrastructure (OCI) Quick Start](https://github.com/oracle-qu
 
 The oci-quickstart-template repository contains the template that can be used for accelerating the construction of quickstarts that runs from local Terraform CLI and OCI Resource Manager.
 
-Simple is a sample application that deploys a standalone virtual machine from the Oracle Cloud Infrastructure Marketplace.
+Spark is a sample that deploys a Spark Cluster which you can configure various options for.
 
 This repo is under active development.  Building open source software is a community effort.  We're excited to engage with the community building this.
 
-## How this project is organized
+## Oracle Resource Manager Deployment
 
-Each application is stored on its own top level folder.
+This template uses Terraform v0.12 and Oracle Resource Manager to deploy Spark.  The template downloads Spark and compiles via Maven using options specified in the Resource Manager template.
 
-Within the simple application project there are 3 modules:
+In order to use the Resource Manager template, you will need to download and re-pack it so the contents are at top-level in the zip.
 
-- [simple-cli](simple-cli): launch a simple VM that subscribes to a Marketplace Image running from Terraform CLI.
-- [simple-orm](simple-orm): Responsible for packaging the simple-cli module in OCI [Resource Manager Stack](https://docs.cloud.oracle.com/iaas/Content/ResourceManager/Tasks/managingstacksandjobs.htm) format.
-- [terraform-modules](terraform-modules): contains a list of re-usable terraform modules for managing infrastructure resources like vcn, subnets, security, etc.
+First, Download the [master.zip](https://github.com/oracle-quickstart/oci-spark/archive/master.zip)
 
-## Prerequisites
+Unzip and re-pack the zip:
+	
+	unzip oci-spark-master.zip
+	cd oci-spark-master
+	zip -r oci-spark-orm.zip *
 
-First off we'll need to do some pre deploy setup.  That's all detailed [here](https://github.com/oracle/oci-quickstart-prerequisites).
+Now you can use the resulting oci-spark-orm.zip in Resource Manager to build the Spark deployment stack. Follow the [Resource Manager instructions](https://docs.cloud.oracle.com/iaas/Content/ResourceManager/Tasks/usingconsole.htm) for how to build a stack.
 
-## Deploying Simple
+## Compiled from Source
 
-Detailed instructions for deploying Simple on Oracle Cloud Infrastructure can be found in the [simple](./simple/README.md) space.
+This deployment compiles from source, as such it does take some time after deployment before the Spark UI is available.  You can monitor progress on the Spark Master by watching the log file /var/log/spark-OCI-initialize.log:
+
+	sudo tail -n 500 -f /var/log/spark-OCI-initialize.log
 
