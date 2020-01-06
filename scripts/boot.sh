@@ -8,6 +8,9 @@ local_fqdn=`hostname -f`
 spark_master_ip=`host $spark_master_fqdn | gawk '{print $4}'`
 fqdn_fields=`echo -e $spark_master_fqdn | gawk -F '.' '{print NF}'`
 cluster_domain=`echo -e $spark_master_fqdn | cut -d '.' -f 3-${fqdn_fields}`
+hadoop_version=`curl -L http://169.254.169.254/opc/v1/instance/metadata/hadoop_version`
+build_mode=`curl -L http://169.254.169.254/opc/v1/instance/metadata/build_mode`
+use_hive=`curl -L http://169.254.169.254/opc/v1/instance/metadata/use_hive`
 if [ $local_fqdn = $spark_master_fqdn ]; then 
 	block_volume_count="0"
 else
@@ -208,7 +211,41 @@ log "->Install Maven"
 yum install maven -y >> $LOG_FILE
 log "->Build Spark with Maven"
 export MAVEN_OPTS="-Xmx4g -XX:ReservedCodeCacheSize=1g"
-./build/mvn -DskipTests clean package >> $LOG_FILE
+if [ $build_mode = "Hadoop" ]; then
+	log "-->Building with Hadoop compatability"
+	if [ $use_hive = "true" ]; then 
+		log "--->Hive Integration Enabled"
+		if [ $hadoop_version = "2.6.x" ]; then 
+			log "---->Hadoop Version 2.6.x chosen"
+			./build/mvn -Pyarn -Phive-thriftserver -DskipTests clean package >> $LOG_FILE
+		else
+			log "---->Hadoop Version 2.7.x chosen"
+			./build/mvn -Pyarn -Phadoop-2.7 -Dhadoop,version=2.7.3 -Phive-thriftserver -DskipTests clean package >> $LOG_FILE
+		fi
+	else
+		if [ $hadoop_version = "2.6.x" ]; then
+                        log "---->Hadoop Version 2.6.x chosen"
+                        ./build/mvn -Pyarn -DskipTests clean package >> $LOG_FILE
+                else
+                        log "---->Hadoop Version 2.7.x chosen"
+                        ./build/mvn -Pyarn -Phadoop-2.7 -Dhadoop,version=2.7.3 -DskipTests clean package >> $LOG_FILE
+                fi
+	fi
+elif [ $build_mode = "Kubernetes" ]; then 
+        log "-->Building with Kubernetes compatability"
+        ./build/mvn -Pkubernetes -DskipTests clean package >> $LOG_FILE
+elif [ $build_mode = "Mesos" ]; then 
+        log "-->Building with Mesos compatability"
+        if [ $use_hive = "true" ]; then
+                log "--->Hive Integration Enabled"
+                ./build/mvn -Pmesos -Phive -Phive-thriftserver -DskipTests clean package >> $LOG_FILE
+        else
+                ./build/mvn -Pmesos -DskipTests clean package >> $LOG_FILE
+        fi	
+else
+	log "-->Building Stand-Alone Spark Cluster"
+	./build/mvn -DskipTests clean package >> $LOG_FILE
+fi
 log "->Spark Build Complete"
 EXECNAME="PySpark Install"
 log "->Install Python & Pip"
